@@ -1,3 +1,7 @@
+"""A NSUPDATE server class for gevent"""
+# Copyright (c) 2013 Russell Cloran
+# Copyright (c) 2013 Joey Korkames
+
 import struct
 
 import dns.message
@@ -7,64 +11,79 @@ import netifaces
 
 from sleepproxy.manager import manage_host
 
-def handle(server, raddress, message):
-    try:
-        message = dns.message.from_wire(message)
-    except:
-        print "Error decoding DNS message"
-        return
+from gevent.server import DatagramServer
+#https://github.com/surfly/gevent/blob/master/gevent/server.py#L106
 
-    if message.edns < 0:
-        print "Received non-EDNS message, ignoring"
-        return
+__all__ = ['SleepProxyServer']
 
-    if not (message.opcode() == 5 and message.authority):
-        print "Received non-UPDATE message, ignoring"
-        return
+class SleepProxyServer(DatagramServer):
 
-    info = {'records': [], 'addresses': []}
-
-    # Try to guess the interface this came in on
-    for iface in netifaces.interfaces():
-        ifaddresses = netifaces.ifaddresses(iface)
-        for af, addresses in ifaddresses.items():
-            if af != 2:  # AF_INET
-                continue
-            for address in addresses:
-                net = IPy.IP(address['addr']).make_net(address['netmask'])
-                if IPy.IP(raddress[0]) in net:
-                    info['mymac'] = ifaddresses[17][0]['addr']
-                    info['myif'] = iface
-
-    for rrset in message.authority:
-        info['records'].append(rrset)
-        _add_addresses(info, rrset)
-
-    for option in message.options:
-        if option.otype == 2:
-            info['ttl'] = struct.unpack("!L", option.data)
-        if option.otype == 4:
-            info['othermac'] = option.data.encode('hex_codec')[4:]
-
-    # TODO: endsflags seems to indicate some other TTL
-
-    # TODO: Better composability
-    manage_host(info)
-
-    _answer(server.socket, raddress, message)
-
-def _add_addresses(info, rrset):
-    # Not sure if this is the correct way to detect addresses.
-    if rrset.rdtype != dns.rdatatype.PTR or rrset.rdclass != dns.rdataclass.IN:
-        return
-
-    # Meh.
-    if not rrset.name.to_text().endswith('.arpa.'):
-        return
-
-    info['addresses'].append(dns.reversename.to_address(rrset.name))
-
-def _answer(sock, address, query):
-    response = dns.message.make_response(query)
-    sock.sendto(response.to_wire(), address)
-
+    def handle(self, message, raddress):
+        try:
+            message = dns.message.from_wire(message)
+        except:
+            print "Error decoding DNS message"
+            return
+    
+        if message.edns < 0:
+            print "Received non-EDNS message, ignoring"
+            return
+    
+        if not (message.opcode() == 5 and message.authority):
+            print "Received non-UPDATE message, ignoring"
+            return
+    
+        info = {'records': [], 'addresses': []}
+    
+        # Try to guess the interface this came in on
+        for iface in netifaces.interfaces():
+            ifaddresses = netifaces.ifaddresses(iface)
+            for af, addresses in ifaddresses.items():
+                if af != 2:  # AF_INET
+                    continue
+                for address in addresses:
+                    net = IPy.IP(address['addr']).make_net(address['netmask'])
+                    if IPy.IP(raddress[0]) in net:
+                        info['mymac'] = ifaddresses[17][0]['addr']
+                        info['myif'] = iface
+    
+        for rrset in message.authority:
+            info['records'].append(rrset)
+            self._add_addresses(info, rrset)
+    
+        #print 'NSUPDATE START'
+        #print message.to_text()
+        #print 'NSUPDATE END'
+    
+        for option in message.options: #EDNS0
+            if option.otype == 2: # http://files.dns-sd.org/draft-sekar-dns-ul.txt
+                info['ttl'] = struct.unpack("!L", option.data) #send-WOL-no-later-than timer TTL
+            if option.otype == 4:
+                info['othermac'] = option.data.encode('hex_codec')[4:] #WOL target mac
+                #if option.data[1] > 18: #[5] password required in wakeup packet
+                #http://tools.ietf.org/id/draft-cheshire-edns0-owner-option-00.txt
+                #  mDNC.c:SendSPSRegistrationForOwner() doesn't seem to add a password
+    
+        # TODO: check for DNSSEC 'do' flag
+    
+        # TODO: endsflags seems to indicate some other TTL
+    
+        # TODO: Better composability
+        manage_host(info)
+    
+        self._answer(raddress, message)
+    
+    def _add_addresses(self, info, rrset):
+        # Not sure if this is the correct way to detect addresses.
+        if rrset.rdtype != dns.rdatatype.PTR or rrset.rdclass not in [dns.rdataclass.IN, 32769]:
+            return
+    
+        # Meh.
+        if not rrset.name.to_text().endswith('.in-addr.arpa.'): #TODO: support .ip6.arpa.
+            return
+    
+        info['addresses'].append(dns.reversename.to_address(rrset.name))
+    
+    def _answer(self, address, query):
+        response = dns.message.make_response(query)
+        self.socket.sendto(response.to_wire(), address)
