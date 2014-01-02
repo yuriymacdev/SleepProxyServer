@@ -1,9 +1,12 @@
+from time import sleep
+
 import sleepproxy.mdns as mdns
 import sleepproxy.arp as arp
 import sleepproxy.tcp as tcp
 
 def manage_host(info):
     mdns.handle(info['othermac'], info['records'])
+    sleep(5) #prevent potential race condition where host is woken up right after NSUPDATE by backlogged ARP/TCP requests 
     arp.handle(info['othermac'], info['addresses'], info['mymac'], info['myif'])
     tcp.handle(info['othermac'], info['addresses'], info['myif'])
 
