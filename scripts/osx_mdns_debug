@@ -1,0 +1,27 @@
+#!/bin/bash
+
+#run as root
+[ $(id -u) != 0 ] && exec sudo $0
+
+# trap ctrl-c and call ctrl_c()
+trap ctrl_c INT
+
+function ctrl_c() {
+        echo "** Trapped CTRL-C"
+	killall mDNSResponder #restore default log levels to speed up syslog
+}
+
+set -x
+
+#INFO dumps state
+#USR1 detail logs
+#USR2 per-query/packet logs
+killall mDNSResponder
+(
+sleep 2
+killall -INFO mDNSResponder
+killall -USR1 mDNSResponder
+killall -USR2 mDNSResponder
+) &
+syslog -c mDNSResponder id #drop syslog debug filter bits
+syslog -w 0 -k Sender mDNSResponder #logtail

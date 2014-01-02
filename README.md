@@ -69,16 +69,7 @@ launchctl load /System/Library/LaunchDaemons/com.apple.mDNSResponder.plist
 
 * Get detailed syslogs for mDNSresponder, all SPS actions and all packets (noisy!!)
 ```
-(
-sleep 2
-sudo killall mDNSResponder
-sleep 0.2
-sudo killall -INFO mDNSResponder
-sudo killall -USR1 mDNSResponder
-sudo killall -USR2 mDNSResponder
-) &
-syslog -c mDNSResponder id
-syslog -w 0 -k Sender mDNSResponder
+scripts/osx_mdns_debug
 ```
 
 * sleep-wake-cycle your Mac to test SPS registration. Should take about 1 minute. For extensive testing, consider disabling the logoff-on-sleep checkbox in SysPrefs->Security.
