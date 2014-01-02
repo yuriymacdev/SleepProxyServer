@@ -1,3 +1,4 @@
+import logging
 import dbus
 import dns.rdatatype
 import dns.rdataclass
@@ -39,44 +40,47 @@ def register_service(record):
     group.Commit()
 
 def handle(mac, records):
+    logging.info('Now mirroring mDNS advertisements from %s to local Avahi server' % (mac))
     if mac in _HOSTS:
-        print "I already seem to be handling mDNS for %s" % (mac, )
+        logging.debug("I already seem to be handling mDNS for %s" % (mac, ))
         return
     group = _get_group()
     _HOSTS[mac] = group
     _update_to_group(group, records)
     result = group.Commit()
-    print "Result of Commit() on mDNS records was %s" % (result, )
+    logging.debug("Result of Commit() on mDNS records was %s" % (result, ))
 
 def forget(mac):
-    print "Pretending to forget %s in mDNS handler" % (mac, )
+    print "Removing %s from mDNS handler" % (mac, )
     if mac not in _HOSTS:
-        print "I don't seem to be managing mDNS for %s" % (mac, )
+        logging.debug("I don't seem to be managing mDNS for %s" % (mac, ))
         return
 
     group = _HOSTS.pop(mac)
     group.Free()
 
 def _update_to_group(group, rrsets):
-    """Convert a DNS UPDATE to additions to an mDNS group"""
+    """Convert a DNS UPDATE to additions to an Avahi mDNS group"""
+    logging.debug('parsing DNS UPDATE:\n\n\%s' % rrsets)
     for rrset in rrsets:
-        print 'Got DNS UPDATE: %s' % rrset.to_text()
-        for record in rrset:
+       for record in rrset:
             if record.rdtype not in [dns.rdatatype.PTR, dns.rdatatype.A, dns.rdatatype.AAAA, dns.rdatatype.TXT, dns.rdatatype.SRV]:
-                print 'Invalid DNS RR type: %s, skipping' % record.rdtype
+                logging.warn('Invalid DNS RR type (%s), not adding mDNS record to Avahi' % record.rdtype)
                 continue
             if record.rdclass not in [dns.rdataclass.IN, 32769]:
-                print 'Invalid DNS RR class: %s, skipping' % record.rdclass
+                logging.warn('Invalid DNS RR class (%s), not adding mDNS record to Avahi' % record.rdclass)
                 #32769 is 'DLV', like DNSSEC's DS. rfc4431,4034 . But that is a rdtype, not a rdclass...
                 # OSX's mdnsresponder code seems to tickle the rdclass to mark bonjour records in memory for export to sleep proxy, but doesn't change them back before sending..
                 #could be based on http://www.opensource.apple.com/source/mDNSResponder/mDNSResponder-522.1.11/PrivateDNS.txt
                 #there is a _kerberos service with a SHA1 key as well http://www.painless-security.com/blog/2007/10/31/p2p-kerberos
                 continue
-            #print record.to_digestable()
-            #print string_array_to_txt_array([record.to_digestable()])[0]
-            #print 'ZC<DNS UPDATE record: %s' % record.to_text()
+
             #having problems with auto-incremented host names with parentheses in SRV/TXT/PTR
             # fanboy\032\(2\)._eppc._tcp.local. 4500 CLASS32769 TXT "" # `fanboy (2)` -> dbus.Byte(NN) ??
+            #print record.to_digestable()
+            #print string_array_to_txt_array([record.to_digestable()])[0]
+
+            logging.info('adding mDNS record to Avahi: %s' % rrset.to_text())
             group.AddRecord( #http://avahi.sourcearchive.com/documentation/0.6.30-5/avahi-client_2publish_8h_a849f3042580d6c8534cba820644517ac.html#a849f3042580d6c8534cba820644517ac
                 IF_UNSPEC,  # iface TODO
                 PROTO_UNSPEC,  # protocol TODO _INET & _INET6

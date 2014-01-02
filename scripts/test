@@ -9,6 +9,11 @@
 import os, sys
 sys.path.insert(0, os.path.realpath(__file__))
 
+import logging
+import logging.handlers
+logging.basicConfig(level=logging.DEBUG)
+#logging.getLogger().addHandler(logging.handlers.SysLogHandler(address='/dev/log'))
+
 import gevent.monkey
 gevent.monkey.patch_all()
 

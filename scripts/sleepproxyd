@@ -7,6 +7,11 @@ from functools import partial
 
 from sleepproxy import mdns, dnsserve
 
+import logging
+import logging.handlers
+logging.basicConfig(level=logging.DEBUG)
+logging.getLogger().addHandler(logging.handlers.SysLogHandler(address='/dev/log'))
+
 mdns.register_service(
     {
         'name': '10-34-10-70 SleepProxyServer', #<Type>-<Portability>-<MarginalPower>-<TotalPower> <PrettyName>
@@ -20,6 +25,6 @@ mdns.register_service(
     }
 )
 
+logging.warn("Starting SleepProxyServer on 0.0.0.0:3535")
 server = dnsserve.SleepProxyServer(('0.0.0.0', 3535))
 server.serve_forever() #dispatches a new dnsserve for every SPS client that sends an NSUPDATE to us
-

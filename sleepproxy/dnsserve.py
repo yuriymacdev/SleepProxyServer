@@ -3,6 +3,7 @@
 # Copyright (c) 2013 Joey Korkames
 
 import struct
+import logging
 
 import dns.message
 import dns.reversename
@@ -22,15 +23,15 @@ class SleepProxyServer(DatagramServer):
         try:
             message = dns.message.from_wire(message)
         except:
-            print "Error decoding DNS message"
+            logging.warning("Error decoding DNS message")
             return
     
         if message.edns < 0:
-            print "Received non-EDNS message, ignoring"
+            logging.debug("Received non-EDNS message, ignoring")
             return
     
         if not (message.opcode() == 5 and message.authority):
-            print "Received non-UPDATE message, ignoring"
+            logging.debug("Received non-UPDATE message, ignoring")
             return
     
         info = {'records': [], 'addresses': []}
@@ -51,9 +52,7 @@ class SleepProxyServer(DatagramServer):
             info['records'].append(rrset)
             self._add_addresses(info, rrset)
     
-        #print 'NSUPDATE START'
-        #print message.to_text()
-        #print 'NSUPDATE END'
+        logging.debug('NSUPDATE START--\n\n' + message.to_text() + '\n\n--NSUPDATE END')
     
         for option in message.options: #EDNS0
             if option.otype == 2: # http://files.dns-sd.org/draft-sekar-dns-ul.txt
@@ -68,11 +67,11 @@ class SleepProxyServer(DatagramServer):
     
         # TODO: endsflags seems to indicate some other TTL
     
+        self._answer(raddress, message)
+
         # TODO: Better composability
         manage_host(info)
-    
-        self._answer(raddress, message)
-    
+        
     def _add_addresses(self, info, rrset):
         # Not sure if this is the correct way to detect addresses.
         if rrset.rdtype != dns.rdatatype.PTR or rrset.rdclass not in [dns.rdataclass.IN, 32769]:

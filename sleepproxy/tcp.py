@@ -1,4 +1,5 @@
 from functools import partial
+import logging
 
 from scapy.all import IP, TCP
 
@@ -9,10 +10,10 @@ from sleepproxy.wol import wake
 _HOSTS = {}
 
 def handle(mac, addresses, iface):
-    print "Pretending to handle incoming SYN for %s: %s" % (mac, addresses, )
+    logging.info("Now handling incoming SYNs for %s:%s on %s" % (mac, addresses, iface))
 
     if mac in _HOSTS:
-        print "Ignoring already managed host %s" % (mac, )
+        logging.debug("Ignoring already managed host %s" % (mac, ))
 
     for address in addresses:
         if ':' in address:
@@ -28,9 +29,9 @@ def handle(mac, addresses, iface):
         thread.start()
 
 def forget(mac):
-    print "Pretending to forget host %s in TCP handler" % (mac, )
+    logging.info("Removing host %s from TCP handler" % (mac, ))
     if mac not in _HOSTS:
-        print "I don't seem to know about %s, ignoring" % (mac, )
+        logging.info("I don't seem to know about %s, ignoring" % (mac, ))
         return
     _HOSTS[mac].stop()
     del _HOSTS[mac]
@@ -40,9 +41,9 @@ def _handle_packet(mac, address, packet):
     if not (IP in packet and TCP in packet):
         return
     if packet[IP].dst != address:
-        print "Sniffed a TCP SYN for the wrong address!?"
-        print packet.show()
+        logging.debug("Sniffed a TCP SYN for the wrong address?: %s" % packet.show() )
         return
+    logging.debug(packet.display())
     wake(mac)
 
     # TODO: Check if it awoke?
