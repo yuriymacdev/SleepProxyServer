@@ -61,7 +61,7 @@ class SleepProxyServer(DatagramServer):
                 info['othermac'] = option.data.encode('hex_codec')[4:] #WOL target mac
                 #if option.data[1] > 18: #[5] password required in wakeup packet
                 #http://tools.ietf.org/id/draft-cheshire-edns0-owner-option-00.txt
-                #  mDNC.c:SendSPSRegistrationForOwner() doesn't seem to add a password
+                #  mDNS.c:SendSPSRegistrationForOwner() doesn't seem to add a password
     
         # TODO: check for DNSSEC 'do' flag
     

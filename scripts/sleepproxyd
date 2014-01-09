@@ -1,19 +1,27 @@
 #!/usr/bin/env python
 
-import gevent.monkey
-gevent.monkey.patch_all()
-
-from functools import partial
-
-from sleepproxy import mdns, dnsserve
+import argparse
+parser = argparse.ArgumentParser(description='Sleep Proxy Server for Macs: http://github.com/kfix/SleepProxyServer')
+parser.add_argument('--verbose', action='store_true', help='Run with verbose logging')
+parser.add_argument('--bindaddr', default='0.0.0.0', help='IP address to listen for sleeper registrations')
+#need to support systemd socket activation
+args = parser.parse_args()
 
 import logging
 import logging.handlers
-logging.basicConfig(level=logging.DEBUG)
-logging.getLogger().addHandler(logging.handlers.SysLogHandler(address='/dev/log'))
+logfmt = '%(module)s[%(process)d/%(threadName)s]:%(levelname)s: %(message)s' #http://docs.python.org/2/library/logging.html#logrecord-attributes
 
-mdns.register_service(
-    {
+if args.verbose:
+    logging.basicConfig(format=logfmt + ' --(%(pathname)s:%(lineno)d)--', level=logging.DEBUG)
+else:
+    logging.basicConfig(format=logfmt, level=logging.WARN)
+
+syslog=logging.handlers.SysLogHandler(address='/dev/log') #post messages to syslog in addition to stdout
+syslog.setFormatter(logging.Formatter(logfmt))
+logging.getLogger().addHandler(syslog)
+
+from sleepproxy import mdns, dnsserve
+mdns.register_service({
         'name': '10-34-10-70 SleepProxyServer', #<Type>-<Portability>-<MarginalPower>-<TotalPower> <PrettyName>
         #   http://www.opensource.apple.com/source/mDNSResponder/mDNSResponder-522.1.11/mDNSMacOSX/mDNSMacOSX.c SPSCreateDict()
         #   just make sure Type == 10, see SetSPS()
@@ -22,9 +30,11 @@ mdns.register_service(
         'host': '', #localhost
         'protocol': mdns.PROTO_INET,  # TODO: Support IP6
         'port': 3535,
-    }
-)
+})
 
-logging.warn("Starting SleepProxyServer on 0.0.0.0:3535")
-server = dnsserve.SleepProxyServer(('0.0.0.0', 3535))
+import gevent.monkey
+gevent.monkey.patch_all()
+
+logging.warn("Starting SleepProxyServer on %s:3535" % args.bindaddr)
+server = dnsserve.SleepProxyServer((args.bindaddr, 3535))
 server.serve_forever() #dispatches a new dnsserve for every SPS client that sends an NSUPDATE to us

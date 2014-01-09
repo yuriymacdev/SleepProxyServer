@@ -11,8 +11,7 @@ sys.path.insert(0, os.path.realpath(__file__))
 
 import logging
 import logging.handlers
-logging.basicConfig(level=logging.DEBUG)
-#logging.getLogger().addHandler(logging.handlers.SysLogHandler(address='/dev/log'))
+logging.basicConfig(format="%(asctime)s %(levelname)s %(pathname)s:%(lineno)d %(process)d/%(threadName)s: %(message)s", level=logging.DEBUG)
 
 import gevent.monkey
 gevent.monkey.patch_all()
@@ -37,28 +36,28 @@ payload 1440
 ;ZONE
 ;PREREQ
 ;UPDATE
-fanboy._device-info._tcp.local. 4500 IN TXT "model=Macmini3,1" "osxvers=13"
-fanboy._ssh._tcp.local. 4500 CLASS32769 TXT ""
+fakemac._device-info._tcp.local. 4500 IN TXT "model=Macmini3,1" "osxvers=13"
+fakemac._ssh._tcp.local. 4500 CLASS32769 TXT ""
 _services._dns-sd._udp.local. 4500 IN PTR _ssh._tcp.local.
-_ssh._tcp.local. 4500 IN PTR fanboy._ssh._tcp.local.
-fanboy._sftp-ssh._tcp.local. 4500 CLASS32769 TXT ""
+_ssh._tcp.local. 4500 IN PTR fakemac._ssh._tcp.local.
+fakemac._sftp-ssh._tcp.local. 4500 CLASS32769 TXT ""
 _services._dns-sd._udp.local. 4500 IN PTR _sftp-ssh._tcp.local.
-_sftp-ssh._tcp.local. 4500 IN PTR fanboy._sftp-ssh._tcp.local.
-fanboy._smb._tcp.local. 4500 CLASS32769 TXT ""
+_sftp-ssh._tcp.local. 4500 IN PTR fakemac._sftp-ssh._tcp.local.
+fakemac._smb._tcp.local. 4500 CLASS32769 TXT ""
 _services._dns-sd._udp.local. 4500 IN PTR _smb._tcp.local.
-_smb._tcp.local. 4500 IN PTR fanboy._smb._tcp.local.
-fanboy._eppc._tcp.local. 4500 CLASS32769 TXT ""
+_smb._tcp.local. 4500 IN PTR fakemac._smb._tcp.local.
+fakemac._eppc._tcp.local. 4500 CLASS32769 TXT ""
 _services._dns-sd._udp.local. 4500 IN PTR _eppc._tcp.local.
-_eppc._tcp.local. 4500 IN PTR fanboy._eppc._tcp.local.
-_kerberos.fanboy.local. 4500 IN TXT "LKDC:SHA1.066C0CD4E8093DBC5E5FFE9B87D23C7C82B53BC5"
-fanboy._ssh._tcp.local. 120 CLASS32769 SRV \# 20 0000000000160666616e626f79056c6f 63616c00
-fanboy._sftp-ssh._tcp.local. 120 CLASS32769 SRV \# 20 0000000000160666616e626f79056c6f 63616c00
-fanboy._smb._tcp.local. 120 CLASS32769 SRV \# 20 0000000001bd0666616e626f79056c6f 63616c00
-fanboy._eppc._tcp.local. 120 CLASS32769 SRV \# 20 000000000bd70666616e626f79056c6f 63616c00
-9.3.D.9.E.D.E.F.F.F.0.2.A.9.6.D.0.0.0.0.0.0.0.0.0.0.0.0.0.8.E.F.ip6.arpa. 120 CLASS32769 PTR fanboy.local.
-15.2.2.10.in-addr.arpa. 120 CLASS32769 PTR fanboy.local.
-fanboy.local. 120 CLASS32769 AAAA \# 16 fe80000000000000d69a20fffede9d39
-fanboy.local. 120 CLASS32769 A \# 4 0a02020f
+_eppc._tcp.local. 4500 IN PTR fakemac._eppc._tcp.local.
+_kerberos.fakemac.local. 4500 IN TXT "LKDC:SHA1.066C0CD4E8093DBC5E5FFE9B87D23C7C82B53BC5"
+fakemac._ssh._tcp.local. 120 CLASS32769 SRV \# 20 0000000000160666616e626f79056c6f 63616c00
+fakemac._sftp-ssh._tcp.local. 120 CLASS32769 SRV \# 20 0000000000160666616e626f79056c6f 63616c00
+fakemac._smb._tcp.local. 120 CLASS32769 SRV \# 20 0000000001bd0666616e626f79056c6f 63616c00
+fakemac._eppc._tcp.local. 120 CLASS32769 SRV \# 20 000000000bd70666616e626f79056c6f 63616c00
+9.3.D.9.E.D.E.F.F.F.0.2.A.9.6.D.0.0.0.0.0.0.0.0.0.0.0.0.0.8.E.F.ip6.arpa. 120 CLASS32769 PTR fakemac.local.
+15.2.2.10.in-addr.arpa. 120 CLASS32769 PTR fakemac.local.
+fakemac.local. 120 CLASS32769 AAAA \# 16 fe80000000000000d69a20fffede9d39
+fakemac.local. 120 CLASS32769 A \# 4 0a02020f
 ;ADDITIONAL'''
 
 message = dns.message.from_text(nsupdate)
@@ -68,3 +67,7 @@ for rrset in message.authority:
 import sleepproxy.manager
 
 sleepproxy.manager.manage_host(info)
+logging.info('Now waiting for packets. Hit CTRL-C to quit test')
+while True:
+   None
+

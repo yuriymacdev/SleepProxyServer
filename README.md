@@ -2,26 +2,29 @@ SleepProxyServer
 ================
 mDNS (Bonjour) Sleep Proxy Server implementation for Python.
 
+This package implements the [Wake on Demand service]((http://support.apple.com/kb/HT3774?viewlocale=en_US&locale=en_US) that is automatically provided by Apple TV and Airport Express devices.  
+
 Status
 ------
-SPS currently works with the SleepProxyClient python package and OSX 10.9's mDNSResponder.  
+SPS currently works with the [SleepProxyClient](http://github.com/awein/SleepProxyClient) python package and OSX 10.9's mDNSResponder.  
 More tests with older OSX mDNS clients are needed (see Debugging instructions below).  
 Selective-port waking is not implemented, any TCP request to a sleep client will result in a wakeup attempt.  
 
-Purpose
+Internals
 ------
-SPS will spoof ARP replies for a sleep proxy client (a "sleeper") that registered itself before powering down.  
-SPS will also proxy mDNS service advertisements for the sleeper so that their services can still be browsed by other mDNS clients on the network.  
-When TCP requests are made to a sleeper, SPS will attempt to wake the sleeper with a WOL "magic packet".  
-If it wakes up, the sleeper should gratuitously reassert its ARP and receive the packet (probably re-transmitted 
-after the late ARP) that it missed while sleeping.
+The included server daemon, sleeproxyd, will:  
+* dnsserve.py: Handle DNSUPDATE registrations send to :5353 from sleep proxy clients (aka. "sleepers") preparing to power down  
+* arp.py: Spoof ARP replies for requests made to find the IP's of sleepers. Also monitors for sleepers' own gratuitous ARPs after wakeup so that they may be deregistered from SPS.  
+* mdns.py: Have Avahi mirror the mDNS service advertisements of sleepers so that their services can still be browsed by other mDNS clients on the local network.  
+* tcp.py: Listen for TCP requests made to a sleeper. On receipt, will attempt to wake the sleeper with a WOL "magic packet".  
 
 Installation
 -------
 Being based on ZeroConf, SPS requires almost no configuration. Just run it and clients will register with it within their regular polling intervals.  
 You can reboot clients that you wish to register immediately.  
 You must ensure both SPS server and client use the same network-segment and IP subnet and that IP Multicast traffic between them is not blocked.  
-gevent 1.0 is required, which is relatively new and has not been packaged into many *nix distributions yet.
+
+gevent 1.0 is required for its co-operative threading feature. 1.0 is relatively new and has not been packaged into many *nix distributions yet.  
 It also cannot be used under Python 3, Python 2.7 is recommended.
 
 * Debian/Ubuntu
@@ -80,10 +83,8 @@ pmset relative wake 1; pmset sleepnow
 
 Further Reading
 -------
-* mDNS: http://datatracker.ietf.org/doc/rfc6762/
+* [mDNS rfc](http://datatracker.ietf.org/doc/rfc6762/)
   * draft #8 is last version to describe Sleep Proxy services @ sec 17.: http://tools.ietf.org/id/draft-cheshire-dnsext-multicastdns-08.txt
-* ZeroConf: http://datatracker.ietf.org/doc/rfc6763/
+* [ZeroConf rfc](http://datatracker.ietf.org/doc/rfc6763/)
 * http://datatracker.ietf.org/wg/dnssd/charter/
   * changes to mDNS/ZC for larger networks are under development: http://datatracker.ietf.org/doc/draft-cheshire-dnssd-hybrid/
-* http://git.0pointer.de/?p=avahi.git;a=summary
-  * http://sources.debian.net/src/avahi/latest

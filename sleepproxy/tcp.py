@@ -10,7 +10,7 @@ from sleepproxy.wol import wake
 _HOSTS = {}
 
 def handle(mac, addresses, iface):
-    logging.info("Now handling incoming SYNs for %s:%s on %s" % (mac, addresses, iface))
+    logging.info("Now handling TCP SYNs for %s:%s on %s" % (mac, addresses, iface))
 
     if mac in _HOSTS:
         logging.debug("Ignoring already managed host %s" % (mac, ))
@@ -19,7 +19,6 @@ def handle(mac, addresses, iface):
         if ':' in address:
             # TODO: Handle IP6
             continue
-        print 'Starting TCP sniffer for %s' % (address, )
         thread = SnifferThread(
             filterexp="tcp[tcpflags] & tcp-syn != 0 and tcp[tcpflags] & tcp-ack = 0 and dst host %s" % (address, ),
             prn=partial(_handle_packet, mac, address),
