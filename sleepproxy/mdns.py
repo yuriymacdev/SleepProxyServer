@@ -3,10 +3,11 @@ import dbus
 import dns.rdatatype
 import dns.rdataclass
 
+#avahi constants http://avahi.sourcearchive.com/documentation/0.6.10/____init_____8py-source.html
 IF_UNSPEC = -1
-
-PROTO_UNSPEC = -1
-PROTO_INET = 0
+PROTO_UNSPEC = -1 #dual-stack
+PROTO_INET = 0 #v4
+PROTO_INET6 = 1
 
 _HOSTS = {}
 
@@ -25,6 +26,7 @@ def string_array_to_txt_array(t):
 def register_service(record):
     group = _get_group()
 
+    #http://linux.die.net/man/5/avahi.service
     group.AddService(
         record.get('iface', IF_UNSPEC),
         record.get('protocol', PROTO_UNSPEC),
@@ -75,6 +77,9 @@ def _update_to_group(group, rrsets):
                 #there is a _kerberos service with a SHA1 key as well http://www.painless-security.com/blog/2007/10/31/p2p-kerberos
                 continue
 
+            #if (record.rdtype == dns.rdatatype.PTR and ':' in record.to_digestable()) or record.rdtype == dns.rdatatype.AAAA:
+            #    continue #ignore IPV6 for now, can't sniff those connections
+
             #having problems with auto-incremented host names with parentheses in SRV/TXT/PTR
             # fanboy\032\(2\)._eppc._tcp.local. 4500 CLASS32769 TXT "" # `fanboy (2)` -> dbus.Byte(NN) ??
             #print record.to_digestable()
@@ -82,10 +87,9 @@ def _update_to_group(group, rrsets):
 
             logging.info('adding mDNS record to Avahi: %s' % rrset.to_text())
             group.AddRecord( #http://avahi.sourcearchive.com/documentation/0.6.30-5/avahi-client_2publish_8h_a849f3042580d6c8534cba820644517ac.html#a849f3042580d6c8534cba820644517ac
-                IF_UNSPEC,  # iface TODO
-                PROTO_UNSPEC,  # protocol TODO _INET & _INET6
-                #dbus.UInt32(0),  # AvahiPublishFlags
-                dbus.UInt32(8 | 256),  # AvahiPublishFlags
+                IF_UNSPEC,  # iface *
+                PROTO_UNSPEC,  # proto _INET & _INET6
+                dbus.UInt32(256),  # AvahiPublishFlags (use multicast)
                 str(rrset.name), #name
                 dbus.UInt16(dns.rdataclass.IN), #class
                 dbus.UInt16(record.rdtype), #type

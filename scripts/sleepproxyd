@@ -1,14 +1,31 @@
 #!/usr/bin/env python
 
-import argparse
-parser = argparse.ArgumentParser(description='Sleep Proxy Server for Macs: http://github.com/kfix/SleepProxyServer')
-parser.add_argument('--verbose', action='store_true', help='Run with verbose logging')
-parser.add_argument('--bindaddr', default='0.0.0.0', help='IP address to listen for sleeper registrations')
-#need to support systemd socket activation
-args = parser.parse_args()
+import gevent.monkey
+gevent.monkey.patch_all()
 
+import gevent
+
+import argparse
 import logging
 import logging.handlers
+import subprocess
+import socket
+
+from sleepproxy import mdns, dnsserve
+
+anyaddr = ['0.0.0.0']
+if socket.has_ipv6: anyaddr.append('::')
+
+def glisten(bindaddr):
+    # TODO: support systemd socket activation
+    logging.warn("listening for SleepProxyServer requests on UDP:[%s]:3535" % bindaddr)
+    return dnsserve.SleepProxyServer((bindaddr, 3535))
+
+parser = argparse.ArgumentParser(description='Sleep Proxy Server for Macs: http://github.com/kfix/SleepProxyServer')
+parser.add_argument('--verbose', action='store_true', help='Run with verbose logging')
+parser.add_argument('--bind', nargs='*', default=anyaddr, help='IP address[es] to listen for sleeper registrations')
+args = parser.parse_args()
+
 logfmt = '%(module)s[%(process)d/%(threadName)s]:%(levelname)s: %(message)s' #http://docs.python.org/2/library/logging.html#logrecord-attributes
 
 if args.verbose:
@@ -20,21 +37,17 @@ syslog=logging.handlers.SysLogHandler(address='/dev/log') #post messages to sysl
 syslog.setFormatter(logging.Formatter(logfmt))
 logging.getLogger().addHandler(syslog)
 
-from sleepproxy import mdns, dnsserve
 mdns.register_service({
-        'name': '10-34-10-70 SleepProxyServer', #<Type>-<Portability>-<MarginalPower>-<TotalPower> <PrettyName>
-        #   http://www.opensource.apple.com/source/mDNSResponder/mDNSResponder-522.1.11/mDNSMacOSX/mDNSMacOSX.c SPSCreateDict()
-        #   just make sure Type == 10, see SetSPS()
-        'stype': '_sleep-proxy._udp',
-        'domain': '', #domainname?
-        'host': '', #localhost
-        'protocol': mdns.PROTO_INET,  # TODO: Support IP6
-        'port': 3535,
+    'name': '10-34-10-70 SleepProxyServer', #<Type>-<Portability>-<MarginalPower>-<TotalPower> <PrettyName>
+    #   http://www.opensource.apple.com/source/mDNSResponder/mDNSResponder-522.1.11/mDNSMacOSX/mDNSMacOSX.c SPSCreateDict()
+    #   just make sure Type == 10, see SetSPS()
+    'stype': '_sleep-proxy._udp',
+    'domain': '',
+    #'host': subprocess.check_output(["hostname", "-A"]).strip() #avahi will always dual-stack advertise SPS unless we specifiy a fqdn for our service...
+    'host': '', #"" = localhost
+    'protocol': mdns.PROTO_UNSPEC,
+    'port': 3535,
 })
 
-import gevent.monkey
-gevent.monkey.patch_all()
-
-logging.warn("Starting SleepProxyServer on %s:3535" % args.bindaddr)
-server = dnsserve.SleepProxyServer((args.bindaddr, 3535))
-server.serve_forever() #dispatches a new dnsserve for every SPS client that sends an NSUPDATE to us
+greenlets = [gevent.spawn(glisten(ip).serve_forever) for ip in args.bind]
+gevent.joinall(greenlets)

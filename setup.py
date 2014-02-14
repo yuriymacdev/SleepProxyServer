@@ -14,9 +14,9 @@ setup(
         # "dbus-python",  # Unfortunately not distributed with a setup.py
         "dnspython",
         "gevent",
-        "IPy",
         "netifaces",
         "scapy",
+        "py2-ipadddress"
     ],
     dependency_links=[
         "http://www.secdev.org/projects/scapy/files/",

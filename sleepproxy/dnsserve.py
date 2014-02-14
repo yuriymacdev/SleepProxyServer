@@ -1,13 +1,13 @@
 """A NSUPDATE server class for gevent"""
 # Copyright (c) 2013 Russell Cloran
-# Copyright (c) 2013 Joey Korkames
+# Copyright (c) 2014 Joey Korkames
 
 import struct
 import logging
 
 import dns.message
 import dns.reversename
-import IPy
+import ipaddress
 import netifaces
 
 from sleepproxy.manager import manage_host
@@ -15,9 +15,20 @@ from sleepproxy.manager import manage_host
 from gevent.server import DatagramServer
 #https://github.com/surfly/gevent/blob/master/gevent/server.py#L106
 
+#import socket
+
 __all__ = ['SleepProxyServer']
 
 class SleepProxyServer(DatagramServer):
+
+    # #@classmethod
+    # #def get_listener(self, address, family=None):
+    # #    #return _udp_socket(address, reuse_addr=self.reuse_addr, family=family)
+    # #    sock = socket.socket(family=family, type=socket.SOCK_DGRAM)
+    # #    #if family == socket.AF_INET6: logging.warn("dual-stacking!"); sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, False)
+    # #    if family == socket.AF_INET6: logging.warn("disabling dual-stacking!"); sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, True)
+    # #    sock.bind(address)
+    # #    return sock
 
     def handle(self, message, raddress):
         try:
@@ -37,15 +48,15 @@ class SleepProxyServer(DatagramServer):
         info = {'records': [], 'addresses': []}
     
         # Try to guess the interface this came in on
+        #   todo - precompute this table on new()?
         for iface in netifaces.interfaces():
             ifaddresses = netifaces.ifaddresses(iface)
             for af, addresses in ifaddresses.items():
-                if af != 2:  # AF_INET
-                    continue
+                if af not in (netifaces.AF_INET, netifaces.AF_INET6): continue
                 for address in addresses:
-                    net = IPy.IP(address['addr']).make_net(address['netmask'])
-                    if IPy.IP(raddress[0]) in net:
-                        info['mymac'] = ifaddresses[17][0]['addr']
+                    iface_net = ipaddress.ip_interface(address['addr'] + '/' + address['netmask'])
+                    if ipaddress.ip_address(raddress[0]) in iface_net:
+                        info['mymac'] = ifaddresses[netifaces.AF_LINK][0]['addr']
                         info['myif'] = iface
     
         for rrset in message.authority:
@@ -74,12 +85,10 @@ class SleepProxyServer(DatagramServer):
         
     def _add_addresses(self, info, rrset):
         # Not sure if this is the correct way to detect addresses.
-        if rrset.rdtype != dns.rdatatype.PTR or rrset.rdclass not in [dns.rdataclass.IN, 32769]:
-            return
+        if rrset.rdtype != dns.rdatatype.PTR or rrset.rdclass not in [dns.rdataclass.IN, 32769]: return
     
-        # Meh.
-        if not rrset.name.to_text().endswith('.in-addr.arpa.'): #TODO: support .ip6.arpa.
-            return
+        #if not rrset.name.to_text().endswith('.in-addr.arpa.'): return #TODO: support SYN sniffing for .ip6.arpa. hosts
+        if not rrset.name.to_text().endswith('.arpa.'): return #all we care about are reverse-dns records
     
         info['addresses'].append(dns.reversename.to_address(rrset.name))
     

@@ -16,9 +16,6 @@ def handle(mac, addresses, iface):
         logging.debug("Ignoring already managed host %s" % (mac, ))
 
     for address in addresses:
-        if ':' in address:
-            # TODO: Handle IP6
-            continue
         thread = SnifferThread(
             filterexp="tcp[tcpflags] & tcp-syn != 0 and tcp[tcpflags] & tcp-ack = 0 and dst host %s" % (address, ),
             prn=partial(_handle_packet, mac, address),

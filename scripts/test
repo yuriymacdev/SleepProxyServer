@@ -65,9 +65,15 @@ for rrset in message.authority:
     info['records'].append(rrset)
 
 import sleepproxy.manager
-
 sleepproxy.manager.manage_host(info)
-logging.info('Now waiting for packets. Hit CTRL-C to quit test')
-while True:
-   None
 
+import signal
+def quit(*args):
+    sys.exit()
+#signal.signal(signal.SIGINFO, print_hosts) #BSD only
+signal.signal(signal.SIGQUIT, sleepproxy.manager.print_hosts)
+signal.signal(signal.SIGUSR1, sleepproxy.manager.print_hosts)
+signal.signal(signal.SIGHUP, sleepproxy.manager.print_hosts) #would like to forget all hosts...
+signal.signal(signal.SIGINT, quit)
+logging.info('Now waiting for packets. Hit CTRL-C to quit test')
+signal.pause()
