@@ -75,7 +75,7 @@ launchctl load /System/Library/LaunchDaemons/com.apple.mDNSResponder.plist
 scripts/osx_mdns_debug
 ```
 
-* sleep-wake-cycle your Mac to test SPS registration. Should take about 1 minute. For extensive testing, consider disabling the logoff-on-sleep checkbox in SysPrefs->Security.
+* sleep-wake-cycle your Mac to test SPS registration. Should take about 1 minute. For extensive testing, run as root to prevent login prompts on wakeup.
 ```
 pmset relative wake 1; pmset sleepnow
 ```
