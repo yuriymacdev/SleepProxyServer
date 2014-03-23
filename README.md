@@ -2,7 +2,7 @@ SleepProxyServer
 ================
 mDNS (Bonjour) [Sleep Proxy](http://stuartcheshire.org/SleepProxy/) Server implementation for Python.
 
-This package implements the [Wake on Demand service]((http://support.apple.com/kb/HT3774?viewlocale=en_US&locale=en_US) that is normally provided by Apple TV and Airport Express devices.  
+This package implements the [Wake on Demand service](http://support.apple.com/kb/HT3774?viewlocale=en_US&locale=en_US) that is normally provided by Apple TV and Airport Express devices.  
 
 Status
 ------
