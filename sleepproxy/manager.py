@@ -5,9 +5,9 @@ import sleepproxy.tcp as tcp
 
 import logging
 def print_hosts(*args):
-    logging.warn(mdns._HOSTS)
-    logging.warn(arp._HOSTS)
-    logging.warn(tcp._HOSTS)
+    logging.warn("MDNS: %s" % mdns._HOSTS)
+    logging.warn("ARP: %s" % arp._HOSTS)
+    logging.warn("TCP: %s" % tcp._HOSTS)
 
 def manage_host(info):
     mdns.handle(info['othermac'], info['records'])

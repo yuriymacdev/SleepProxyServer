@@ -9,21 +9,17 @@ from sleepproxy.sniff import SnifferThread
 _HOSTS = {}
 
 def handle(othermac, addresses, mymac, iface):
-    logging.info('Now handling ARPs for %s:%s on %s' % (othermac, addresses, iface))
-
     if othermac in _HOSTS:
         logging.info("I already seem to be managing %s, ignoring" % othermac)
         return
+    logging.info('Now handling ARPs for %s:%s on %s' % (othermac, addresses, iface))
 
     for address in addresses:
-        if ':' in address:
-            # TODO: Handle IP6
-            continue
-        thread = SnifferThread(
-            filterexp="arp host %s" % (address, ),
-            prn=partial(_handle_packet, address, mymac, othermac),
-            iface=iface,
-        )
+        if ':' in address: #ipv6
+            expr = "ip6 && icmp6 && (ip6[40] == 135 || ip6[40] == 136) and host %s" % (address) #ipv6 uses ndp, not arp
+        else:
+            expr = "arp host %s" % (address)
+        thread = SnifferThread( filterexp=expr, prn=partial(_handle_packet, address, mymac, othermac), iface=iface,)
         _HOSTS[othermac] = thread
         thread.start()
 
@@ -60,5 +56,5 @@ def _handle_packet(address, mac, sleeper, packet):
             pdst=arp.psrc,
             hwsrc=mac,
             hwdst=packet[ARP].hwsrc)
-    logging.info("Spoofing ARP response for %s to %s" % (arp.pdst, packet[ARP].psrc))
+    logging.warn("Spoofing ARP response for %s to %s" % (arp.pdst, packet[ARP].psrc))
     sendp(reply)

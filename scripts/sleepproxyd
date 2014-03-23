@@ -10,8 +10,10 @@ import logging
 import logging.handlers
 import subprocess
 import socket
+import signal
 
-from sleepproxy import mdns, dnsserve
+from sleepproxy import mdns, dnsserve, manager
+
 
 anyaddr = ['0.0.0.0']
 if socket.has_ipv6: anyaddr.append('::')
@@ -36,18 +38,23 @@ else:
 syslog=logging.handlers.SysLogHandler(address='/dev/log') #post messages to syslog in addition to stdout
 syslog.setFormatter(logging.Formatter(logfmt))
 logging.getLogger().addHandler(syslog)
+#doesn't syslog exceptions...need systemd for that
 
 mdns.register_service({
-    'name': '10-34-10-70 SleepProxyServer', #<Type>-<Portability>-<MarginalPower>-<TotalPower> <PrettyName>
+    'name': '10-34-10-70 SleepProxyServer', #<SPSType>-<SPSPortability>-<SPSMarginalPower>-<SPSTotalPower>.<SPSFeatureFlags> <nicelabel>
+    #   http://www.opensource.apple.com/source/mDNSResponder/mDNSResponder-522.1.11/mDNSCore/mDNS.c ConstructSleepProxyServerName()
+    #   http://www.opensource.apple.com/source/mDNSResponder/mDNSResponder-522.1.11/mDNSCore/mDNSEmbeddedAPI.h
     #   http://www.opensource.apple.com/source/mDNSResponder/mDNSResponder-522.1.11/mDNSMacOSX/mDNSMacOSX.c SPSCreateDict()
     #   just make sure Type == 10, see SetSPS()
+    # feature flags include tcp keepalive based packet mangling for Back To My Mac and etc...
     'stype': '_sleep-proxy._udp',
     'domain': '',
-    #'host': subprocess.check_output(["hostname", "-A"]).strip() #avahi will always dual-stack advertise SPS unless we specifiy a fqdn for our service...
+    #'host': subprocess.check_output(["hostname", "-A"]).strip(), #avahi will always dual-stack advertise SPS unless we specifiy a fqdn for our service...
     'host': '', #"" = localhost
     'protocol': mdns.PROTO_UNSPEC,
     'port': 3535,
 })
 
 greenlets = [gevent.spawn(glisten(ip).serve_forever) for ip in args.bind]
+signal.signal(signal.SIGUSR1, manager.print_hosts)
 gevent.joinall(greenlets)
