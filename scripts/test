@@ -18,7 +18,7 @@ gevent.monkey.patch_all()
 
 info = {
    "othermac": "d49a20de9d39",
-   "addresses": ["10.2.2.15"],
+   "addresses": ["10.2.2.22"],
    "myif": "eth0",
    "mymac": "00:25:31:05:01:98",
    "records": []
@@ -26,7 +26,7 @@ info = {
 
 import dns.message
 
-nsupdate = '''id 45342
+nsupdate = '''id 48872
 opcode UPDATE
 rcode NOERROR
 flags
@@ -37,29 +37,30 @@ payload 1440
 ;PREREQ
 ;UPDATE
 fakemac._device-info._tcp.local. 4500 IN TXT "model=Macmini3,1" "osxvers=13"
-fakemac._ssh._tcp.local. 4500 CLASS32769 TXT ""
+fakemac._rfb._tcp.local. 4500 IN TXT ""
+_services._dns-sd._udp.local. 4500 IN PTR _rfb._tcp.local.
+_rfb._tcp.local. 4500 IN PTR fakemac._rfb._tcp.local.
+fakemac._rfb._tcp.local. 120 IN SRV 0 0 5900 fakemac.local.
+fakemac._ssh._tcp.local. 4500 IN TXT ""
 _services._dns-sd._udp.local. 4500 IN PTR _ssh._tcp.local.
 _ssh._tcp.local. 4500 IN PTR fakemac._ssh._tcp.local.
-fakemac._sftp-ssh._tcp.local. 4500 CLASS32769 TXT ""
+fakemac._sftp-ssh._tcp.local. 4500 IN TXT ""
 _services._dns-sd._udp.local. 4500 IN PTR _sftp-ssh._tcp.local.
 _sftp-ssh._tcp.local. 4500 IN PTR fakemac._sftp-ssh._tcp.local.
-fakemac._smb._tcp.local. 4500 CLASS32769 TXT ""
-_services._dns-sd._udp.local. 4500 IN PTR _smb._tcp.local.
-_smb._tcp.local. 4500 IN PTR fakemac._smb._tcp.local.
-fakemac._eppc._tcp.local. 4500 CLASS32769 TXT ""
+fakemac._ssh._tcp.local. 120 IN SRV 0 0 22 fakemac.local.
+fakemac._sftp-ssh._tcp.local. 120 IN SRV 0 0 22 fakemac.local.
+fakemac._eppc._tcp.local. 4500 IN TXT ""
 _services._dns-sd._udp.local. 4500 IN PTR _eppc._tcp.local.
 _eppc._tcp.local. 4500 IN PTR fakemac._eppc._tcp.local.
+fakemac._eppc._tcp.local. 120 IN SRV 0 0 3031 fakemac.local.
 _kerberos.fakemac.local. 4500 IN TXT "LKDC:SHA1.066C0CD4E8093DBC5E5FFE9B87D23C7C82B53BC5"
-fakemac._ssh._tcp.local. 120 CLASS32769 SRV \# 20 0000000000160666616e626f79056c6f 63616c00
-fakemac._sftp-ssh._tcp.local. 120 CLASS32769 SRV \# 20 0000000000160666616e626f79056c6f 63616c00
-fakemac._smb._tcp.local. 120 CLASS32769 SRV \# 20 0000000001bd0666616e626f79056c6f 63616c00
-fakemac._eppc._tcp.local. 120 CLASS32769 SRV \# 20 000000000bd70666616e626f79056c6f 63616c00
-9.3.D.9.E.D.E.F.F.F.0.2.A.9.6.D.0.0.0.0.0.0.0.0.0.0.0.0.0.8.E.F.ip6.arpa. 120 CLASS32769 PTR fakemac.local.
-15.2.2.10.in-addr.arpa. 120 CLASS32769 PTR fakemac.local.
-fakemac.local. 120 CLASS32769 AAAA \# 16 fe80000000000000d69a20fffede9d39
-fakemac.local. 120 CLASS32769 A \# 4 0a02020f
+9.3.D.9.E.D.E.F.F.F.0.2.A.9.6.D.0.0.0.0.0.0.0.0.0.0.0.0.0.8.E.F.ip6.arpa. 120 IN PTR fakemac.local.
+22.2.2.10.in-addr.arpa. 120 IN PTR fakemac.local.
+fakemac.local. 120 IN AAAA fe80::d69a:20ff:fede:9d39
+fakemac.local. 120 IN A 10.2.2.22
+9.3.D.9.E.D.E.F.F.F.0.2.A.9.6.D.0.0.0.0.8.0.2.5.D.E.F.5.A.5.D.F.ip6.arpa. 120 IN PTR fakemac.local.
+fakemac.local. 120 IN AAAA fd5a:5fed:5208:0:d69a:20ff:fede:9d39
 ;ADDITIONAL'''
-
 message = dns.message.from_text(nsupdate)
 for rrset in message.authority:
     info['records'].append(rrset)
@@ -70,7 +71,7 @@ sleepproxy.manager.manage_host(info)
 import signal
 def quit(*args):
     sys.exit()
-#signal.signal(signal.SIGINFO, print_hosts) #BSD only
+#signal.signal(signal.SIGINFO, sleepproxy.manager.print_hosts) #BSD only, CTRL-T
 signal.signal(signal.SIGQUIT, sleepproxy.manager.print_hosts)
 signal.signal(signal.SIGUSR1, sleepproxy.manager.print_hosts)
 signal.signal(signal.SIGHUP, sleepproxy.manager.print_hosts) #would like to forget all hosts...

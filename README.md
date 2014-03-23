@@ -1,8 +1,8 @@
 SleepProxyServer
 ================
-mDNS (Bonjour) Sleep Proxy Server implementation for Python.
+mDNS (Bonjour) [Sleep Proxy](http://stuartcheshire.org/SleepProxy/) Server implementation for Python.
 
-This package implements the [Wake on Demand service]((http://support.apple.com/kb/HT3774?viewlocale=en_US&locale=en_US) that is automatically provided by Apple TV and Airport Express devices.  
+This package implements the [Wake on Demand service]((http://support.apple.com/kb/HT3774?viewlocale=en_US&locale=en_US) that is normally provided by Apple TV and Airport Express devices.  
 
 Status
 ------
@@ -13,7 +13,7 @@ Selective-port waking is not implemented, any TCP request to a sleep client will
 Internals
 ------
 The included server daemon, sleeproxyd, will:  
-* dnsserve.py: Handle DNSUPDATE registrations send to :5353 from sleep proxy clients (aka. "sleepers") preparing to power down  
+* dnsserve.py: Handle DNSUPDATE registrations sent to UDP:5353 from sleep proxy clients (aka. "sleepers") that are powering down  
 * arp.py: Spoof ARP replies for requests made to find the IP's of sleepers. Also monitors for sleepers' own gratuitous ARPs after wakeup so that they may be deregistered from SPS.  
 * mdns.py: Have Avahi mirror the mDNS service advertisements of sleepers so that their services can still be browsed by other mDNS clients on the local network.  
 * tcp.py: Listen for TCP requests made to a sleeper. On receipt, will attempt to wake the sleeper with a WOL "magic packet".  
@@ -42,7 +42,7 @@ nohup sleepproxyd >/dev/null 2>&1 &
 
 Development & Debugging
 -----
-* run a canned client-less server
+* run a canned client-less server and test a with a mock registration
 ```
 scripts/test
 ```
@@ -57,20 +57,14 @@ gdb -ex r --args python2.7 scripts/sleepproxyd
 
 * play with scapy filters
 ```
+scapy
 sniff(tcpwatch, prn=lambda x: x.display(), filter='tcp[tcpflags] & tcp-syn != 0 and tcp[tcpflags] & tcp-ack = 0 and dst host 10.1.0.15', iface='eth0')
 sniff(prn=lambda x: x.display(), filter='arp host 10.1.0.15', iface='eth0')
 ```
 
 OSX mDNSResponder as a SPS client
 ------------
-* Disable the NIC's embedded sleep proxy so that mDNSresponder can expose all SPS activity to the syslog
-```
-defaults write /System/Library/LaunchDaemons/com.apple.mDNSResponder ProgramArguments -array "/usr/sbin/mDNSResponder" "-UseInternalSleepProxy" 0
-launchctl unload /System/Library/LaunchDaemons/com.apple.mDNSResponder.plist
-launchctl load /System/Library/LaunchDaemons/com.apple.mDNSResponder.plist
-```
-
-* Get detailed syslogs for mDNSresponder, all SPS actions and all packets (noisy!!)
+* Watch syslogs for mDNSresponder filtered for all SPS-related actions (sudo-root required)
 ```
 scripts/osx_mdns_debug
 ```
@@ -79,6 +73,7 @@ scripts/osx_mdns_debug
 ```
 pmset relative wake 1; pmset sleepnow
 ```
+
 * advertise services to SPS from your (Obj)C.app by unsetting service flag [kDNSServiceFlagsWakeOnlyService](https://developer.apple.com/library/mac/documentation/Networking/Reference/DNSServiceDiscovery_CRef/Reference/reference.html#jumpTo_166)
 
 Further Reading

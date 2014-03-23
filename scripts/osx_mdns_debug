@@ -8,10 +8,18 @@ trap ctrl_c INT
 
 function ctrl_c() {
         echo "** Trapped CTRL-C"
+	defaults write /System/Library/LaunchDaemons/com.apple.mDNSResponder ProgramArguments -array "/usr/sbin/mDNSResponder"
+	launchctl unload /System/Library/LaunchDaemons/com.apple.mDNSResponder.plist
+	launchctl load /System/Library/LaunchDaemons/com.apple.mDNSResponder.plist
 	killall mDNSResponder #restore default log levels to speed up syslog
 }
 
 set -x
+
+defaults write /System/Library/LaunchDaemons/com.apple.mDNSResponder ProgramArguments -array "/usr/sbin/mDNSResponder" "-UseInternalSleepProxy" 0 #bypass NIC-embedded SPS client
+#"-OfferSleepProxyService" "10" #test as an "official" SPS Server
+launchctl unload /System/Library/LaunchDaemons/com.apple.mDNSResponder.plist
+launchctl load /System/Library/LaunchDaemons/com.apple.mDNSResponder.plist
 
 #INFO dumps state
 #USR1 detail logs
@@ -21,7 +29,7 @@ killall mDNSResponder
 sleep 2
 killall -INFO mDNSResponder
 killall -USR1 mDNSResponder
-killall -USR2 mDNSResponder
+#killall -USR2 mDNSResponder
 ) &
 syslog -c mDNSResponder id #drop syslog debug filter bits
-syslog -w 0 -k Sender mDNSResponder #logtail
+syslog -w 0 -k Sender mDNSResponder |egrep 'SPS|SleepProxyServer|goodbyes|BeginSleepProcessing|Registered|WOMP' #logtail
