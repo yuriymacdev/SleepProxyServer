@@ -34,7 +34,7 @@ apt-get install libev4 libev-dev libc-ares2 libc-ares-dev python-greenlet python
 LIBEV_EMBED=0 CARES_EMBED=0 easy_install gevent
 
 apt-get install python-setuptools python-scapy python-netifaces python-dbus avahi-daemon tcpdump git
-git clone https://github.com/rcloran/SleepProxyServer.git
+git clone https://github.com/kfix/SleepProxyServer.git
 cd SleepProxyServer/
 python setup.py install
 nohup sleepproxyd >/dev/null 2>&1 &
