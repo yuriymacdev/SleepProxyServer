@@ -17,19 +17,12 @@ import netifaces
 
 import binascii
 
-import pdb
-
 # http://www.opensource.apple.com/source/mDNSResponder/mDNSResponder-522.1.11/mDNSCore/mDNS.c
 # [SLEEPER]BeginSleepProcessing(),NetWakeResolve(),SendSPSRegistration() -> [SPS SERVER]mDNSCoreReceiveUpdate() -> [SLEEPER]mDNSCoreReceive(),mDNSCoreReceiveUpdateR()
 
 # http://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-11
 dns.edns.UL = 2
 dns.edns.OWNER = 4
-
-#http://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-13#4500 in query, 7500L in response
-#dns.flags._edns_by_text.update({'??':7500L})
-#dns.flags._edns_by_value.update({'7500L':'??'})
-#http://tools.ietf.org/html/rfc6891#section-6.1.3
 
 class UpdateLeaseOption(dns.edns.Option):
     """EDNS option for Dynamic DNS Update Leases
@@ -173,10 +166,6 @@ class SleepProxyServer(DatagramServer):
     
         logging.debug('NSUPDATE START--\n\n%s\n\n%s\n\n--NSUPDATE END' % (message,message.options))
  
-        #not getting a nice text parse of OPT record in additional, just shows as "eflags"
-        #[(o.otype, o.data) for o in query.options]
-        #query.find_rrset(3,'.',1,dns.rdatatype.OPT)
-  
         for option in message.options:
             if option.otype == dns.edns.UL:
                 info['ttl'] = option.lease #send-WOL-no-later-than timer TTL
@@ -200,26 +189,10 @@ class SleepProxyServer(DatagramServer):
         info['addresses'].append(dns.reversename.to_address(rrset.name))
     
     def _answer(self, address, query):
-        #pdb.set_trace()
         response = dns.message.make_response(query)
-        #needs a single OPT record to confirm registration:  0 TTL    4500   48 . OPT Max 1440 Lease 7200 Vers 0 Seq  21 MAC D4:9A:20:DE:9D:38
         response.flags = dns.flags.QR | dns.opcode.to_flags(dns.opcode.UPDATE)
-        #response.ednsflags |= #4500 TTL ('kStandardTTL' = 75 min) + ?? extended-rcode = 7200L ?? 7200 (2 hrs) is uDNS default lease
+        #needs a single OPT record to confirm registration:  0 TTL    4500   48 . OPT Max 1440 Lease 7200 Vers 0 Seq  21 MAC D4:9A:20:DE:9D:38
         response.use_edns(edns=True, ednsflags=dns.rcode.NOERROR, payload=query.payload, options=[query.options[0]]) #payload should be 1440, theoretical udp-over-eth maxsz stdframe
         logging.warning("Confirming SPS registration with %s" % address[0])
         logging.debug('RESPONSE--\n\n%s\n\n%s\n\n--RESPONSE END' % (response,response.options))
-        #self.socket.setblocking(0) 
         self.socket.sendto(response.to_wire(), address)
-
-    def _answer_raw(self, address, query):
-        r = dns.renderer.Renderer(id=query.id, flags=(dns.flags.QR | dns.opcode.to_flags(dns.opcode.UPDATE)), max_size=512)
-        r.add_question(qname, qtype, qclass)
-        r.add_rrset(dns.renderer.ANSWER, rrset_1)
-        r.add_rrset(dns.renderer.AUTHORITY, ns_rrset)
-        r.add_edns(edns=0, ednsflags=dns.rcode.NOERROR, payload=query.payload, options=[query.options[0]])
-        r.add_rrset(dns.renderer.ADDTIONAL, ad_rrset_1)
-        r.write_header()
-        wire = r.get_wire()
-        logging.warning("Confirming SPS registration with %s" % address[0])
-        logging.debug('RESPONSE--\n\n%s\n\n--RESPONSE END' % dns.message.from_wire(wire).to_text())
-        self.socket.sendto(wire, address)

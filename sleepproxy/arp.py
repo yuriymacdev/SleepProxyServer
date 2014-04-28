@@ -36,7 +36,7 @@ def _handle_packet(address, mac, sleeper, packet):
         # I don't know how this happens, but I've seen it
         return
     if packet.hwsrc.replace(':','') == sleeper:
-        logging.info("sleeper has awakened, forgetting %s" % sleeper)
+        logging.info("sleeper[%s] has awakened, removing it from ARP watcher" % sleeper)
         sleepproxy.manager.forget_host(sleeper)
         return
     if packet[ARP].op != ARP.who_has:
@@ -56,5 +56,5 @@ def _handle_packet(address, mac, sleeper, packet):
             pdst=arp.psrc,
             hwsrc=mac,
             hwdst=packet[ARP].hwsrc)
-    logging.warn("Spoofing ARP response for %s to %s" % (arp.pdst, packet[ARP].psrc))
+    logging.info("Spoofing ARP response for %s to %s" % (arp.pdst, packet[ARP].psrc))
     sendp(reply)

@@ -9,6 +9,8 @@ Status
 SPS currently works with the [SleepProxyClient](http://github.com/awein/SleepProxyClient) python package and OSX 10.9's mDNSResponder.  
 More tests with older OSX mDNS clients are needed (see Debugging instructions below).  
 Selective-port waking is not implemented, any TCP request to a sleep client will result in a wakeup attempt.  
+On ARM Linux 'Plugs, the speed and memory overheads of pure-python message-parsing and watcher threads are relatively huge...  
+...so a port to Erlang would be beneficial. The basics of parsing DNS-SD updates already [exist](https://github.com/GunioRobot/dnsxd/blob/master/dnsxd/src/dnsxd_op_update.erl)!
 
 Internals
 ------
