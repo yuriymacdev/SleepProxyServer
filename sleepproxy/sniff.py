@@ -8,7 +8,7 @@ class SnifferThread(Thread):
     """A thread which runs a scapy sniff, and can be stopped"""
 
     def __init__(self, prn, filterexp, iface):
-        Thread.__init__(self)
+        Thread.__init__(self) #make this a greenlet?
         self._prn = prn
         self._filterexp = filterexp
         self._iface = iface

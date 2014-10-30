@@ -119,14 +119,20 @@ class SleepProxyServer(DatagramServer):
     # #def get_listener(self, address, family=None):
     # #    #return _udp_socket(address, reuse_addr=self.reuse_addr, family=family)
     # #    sock = socket.socket(family=family, type=socket.SOCK_DGRAM)
-    # #    #if family == socket.AF_INET6: logging.warn("dual-stacking!"); sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, False)
-    # #    if family == socket.AF_INET6: logging.warn("disabling dual-stacking!"); sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, True)
+    # #    #if family == socket.AF_INET6: logging.warning("dual-stacking!"); sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, False)
+    # #    if family == socket.AF_INET6: logging.warning("disabling dual-stacking!"); sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, True)
     # #    sock.bind(address)
     # #    return sock
 
     def handle(self, message, raddress):
         try:
-            message = dns.message.from_wire(message)
+            #with ignored(dns.message.BadEDNS):
+            message = dns.message.from_wire(message, ignore_trailing=True)
+        except dns.message.BadEDNS: 
+            #yosemite's discoveryd sends an OPT record per active NIC, dnspython doesn't like more than 1 OPT record
+            #  https://github.com/rthalley/dnspython/blob/master/dns/message.py#L642 
+            #  so turn off Wi-Fi for ethernet-connected clients
+            pass #or send back an nxdomain or servfail
         except: #no way to just catch dns.exceptions.*
             logging.warning("Error decoding DNS message from %s" % raddress[0])
             logging.debug(traceback.format_exc())
@@ -193,6 +199,6 @@ class SleepProxyServer(DatagramServer):
         response.flags = dns.flags.QR | dns.opcode.to_flags(dns.opcode.UPDATE)
         #needs a single OPT record to confirm registration:  0 TTL    4500   48 . OPT Max 1440 Lease 7200 Vers 0 Seq  21 MAC D4:9A:20:DE:9D:38
         response.use_edns(edns=True, ednsflags=dns.rcode.NOERROR, payload=query.payload, options=[query.options[0]]) #payload should be 1440, theoretical udp-over-eth maxsz stdframe
-        logging.warning("Confirming SPS registration with %s" % address[0])
+        logging.warning("Confirming SPS registration @%s with %s[%s] for %s secs" % (query.options[1].seq, address[0], query.options[1].pmac, query.options[0].lease))
         logging.debug('RESPONSE--\n\n%s\n\n%s\n\n--RESPONSE END' % (response,response.options))
         self.socket.sendto(response.to_wire(), address)

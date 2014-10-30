@@ -19,9 +19,9 @@ def handle(othermac, addresses, mymac, iface):
             expr = "ip6 && icmp6 && (ip6[40] == 135 || ip6[40] == 136) and host %s" % (address) #ipv6 uses ndp, not arp
         else:
             expr = "arp host %s" % (address)
-        thread = SnifferThread( filterexp=expr, prn=partial(_handle_packet, address, mymac, othermac), iface=iface,)
+        thread = SnifferThread( filterexp=expr, prn=partial(_handle_packet, address, mymac, othermac), iface=iface,) #using a callback, but not doing it async
         _HOSTS[othermac] = thread
-        thread.start()
+        thread.start() #make this a greenlet?
 
 def forget(mac):
     logging.info("Removing %s from ARP handler" % (mac, ))

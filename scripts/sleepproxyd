@@ -8,53 +8,45 @@ import gevent
 import argparse
 import logging
 import logging.handlers
-import subprocess
 import socket
 import signal
 
 from sleepproxy import mdns, dnsserve, manager
 
-
-anyaddr = ['0.0.0.0']
-if socket.has_ipv6: anyaddr.append('::')
+class MultilineSysLogHandler(logging.handlers.SysLogHandler):
+    def emit(self, record):
+        lines = record.getMessage().split('\n')
+        for l in lines:
+           record.msg = l
+           super(MultilineSysLogHandler,self).emit(record)
 
 def glisten(bindaddr):
     # TODO: support systemd socket activation
-    logging.warn("listening for SleepProxyServer requests on UDP:[%s]:3535" % bindaddr)
+    logging.warning("listening for SleepProxyServer requests on UDP:[%s]:3535" % bindaddr)
     return dnsserve.SleepProxyServer((bindaddr, 3535))
+
+anyaddr = ['0.0.0.0']
+if socket.has_ipv6: anyaddr.append('::')
 
 parser = argparse.ArgumentParser(description='Sleep Proxy Server for Macs: http://github.com/kfix/SleepProxyServer')
 parser.add_argument('--verbose', action='store_true', help='Run with verbose logging')
 parser.add_argument('--bind', nargs='*', default=anyaddr, help='IP address[es] to listen for sleeper registrations')
 args = parser.parse_args()
 
-logfmt = '%(module)s[%(process)d/%(threadName)s]:%(levelname)s: %(message)s' #http://docs.python.org/2/library/logging.html#logrecord-attributes
+logfmt = 'sleepproxyd[%(process)d/%(threadName)s@%(module)s:%(levelname)s] %(message)s' #http://docs.python.org/2/library/logging.html#logrecord-attributes
 
 if args.verbose:
     logging.basicConfig(format=logfmt + ' --(%(pathname)s:%(lineno)d)--', level=logging.DEBUG)
 else:
-    logging.basicConfig(format=logfmt, level=logging.WARN)
+    logging.basicConfig(format=logfmt, level=logging.WARNING)
 
-syslog=logging.handlers.SysLogHandler(address='/dev/log') #post messages to syslog in addition to stdout
+syslog=MultilineSysLogHandler(address='/dev/log') #post messages to syslog in addition to stdout
 syslog.setFormatter(logging.Formatter(logfmt))
 logging.getLogger().addHandler(syslog)
 #doesn't syslog exceptions...need systemd for that
 
-mdns.register_service({
-    'name': '10-34-10-70 SleepProxyServer', #<SPSType>-<SPSPortability>-<SPSMarginalPower>-<SPSTotalPower>.<SPSFeatureFlags> <nicelabel>
-    #   http://www.opensource.apple.com/source/mDNSResponder/mDNSResponder-522.1.11/mDNSCore/mDNS.c ConstructSleepProxyServerName()
-    #   http://www.opensource.apple.com/source/mDNSResponder/mDNSResponder-522.1.11/mDNSCore/mDNSEmbeddedAPI.h
-    #   http://www.opensource.apple.com/source/mDNSResponder/mDNSResponder-522.1.11/mDNSMacOSX/mDNSMacOSX.c SPSCreateDict()
-    #   just make sure Type == 10, see SetSPS()
-    # feature flags include tcp keepalive based packet mangling for Back To My Mac and etc...
-    'stype': '_sleep-proxy._udp',
-    'domain': '',
-    #'host': subprocess.check_output(["hostname", "-A"]).strip(), #avahi will always dual-stack advertise SPS unless we specifiy a fqdn for our service...
-    'host': '', #"" = localhost
-    'protocol': mdns.PROTO_UNSPEC,
-    'port': 3535,
-})
-
-greenlets = [gevent.spawn(glisten(ip).serve_forever) for ip in args.bind]
 signal.signal(signal.SIGUSR1, manager.print_hosts)
-gevent.joinall(greenlets)
+signal.signal(signal.SIGHUP, manager.advertise)
+manager.advertise()
+greenlets = [gevent.spawn(glisten(ip).serve_forever) for ip in args.bind]
+gevent.joinall(greenlets) #loops forever here

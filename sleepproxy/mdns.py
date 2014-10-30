@@ -61,7 +61,7 @@ def handle(mac, records):
     logging.debug("Result of Commit() on mDNS records was %s" % (result, ))
 
 def forget(mac):
-    print "Removing %s from mDNS handler" % (mac, )
+    logging.info("Removing %s from mDNS handler & Avahi" % (mac, ))
     if mac not in _HOSTS:
         logging.debug("I don't seem to be managing mDNS for %s" % (mac, ))
         return
@@ -71,17 +71,17 @@ def forget(mac):
 
 def _update_to_group(group, rrsets):
     """Convert a DNS UPDATE to additions to an Avahi mDNS group"""
-    logging.debug('parsing DNS UPDATE:\n\n\%s' % rrsets)
+    #logging.debug('parsing DNS UPDATE:\n\n\%s' % rrsets)
     for rrset in rrsets:
        for record in rrset:
             record.rdclass %= dns.rdataclass.UNIQUE #remove cache-flush bit
 
             if record.rdtype not in [dns.rdatatype.PTR, dns.rdatatype.A, dns.rdatatype.AAAA, dns.rdatatype.TXT, dns.rdatatype.SRV]:
-                logging.warn('Invalid DNS RR type (%s), not adding mDNS record to Avahi' % record.rdtype)
+                logging.warning('Invalid DNS RR type (%s), not adding mDNS record to Avahi' % record.rdtype)
                 continue
 
             if record.rdclass != dns.rdataclass.IN:
-                logging.warn('Invalid DNS RR class (%s), not adding mDNS record to Avahi' % record.rdclass)
+                logging.warning('Invalid DNS RR class (%s), not adding mDNS record to Avahi' % record.rdclass)
                 continue
 
             #if (record.rdtype == dns.rdatatype.PTR and ':' in record.to_digestable()) or record.rdtype == dns.rdatatype.AAAA:
@@ -90,23 +90,28 @@ def _update_to_group(group, rrsets):
             #having problems with auto-incremented host names with parentheses in SRV/TXT/PTR
             # mDNS.c uses UTF8, dnspythom.from_wire() assumes ANSI
             # fanboy\032\(2\)._eppc._tcp.local. 4500 CLASS32769 TXT "" # `fanboy (2)` -> dbus.Byte(NN) ??
+            # and IN PTR fanboy._device-info._tcp.local.
             #print record.to_digestable()
             #print string_array_to_txt_array([record.to_digestable()])[0]
             #http://dbus.freedesktop.org/doc/dbus-python/api/dbus.String-class.html
             #http://dbus.freedesktop.org/doc/dbus-python/api/dbus.UTF8String-class.html
 
-            logging.info('adding mDNS record to Avahi: %s' % rrset.to_text())
-            group.AddRecord( #http://avahi.sourcearchive.com/documentation/0.6.30-5/avahi-client_2publish_8h_a849f3042580d6c8534cba820644517ac.html#a849f3042580d6c8534cba820644517ac
-                IF_UNSPEC,  # iface *
-                PROTO_UNSPEC,  # proto _INET & _INET6
-                dbus.UInt32(256),  # AvahiPublishFlags (use multicast)
-                str(rrset.name).decode('utf-8'), #name
-                dbus.UInt16(record.rdclass), #class
-                dbus.UInt16(record.rdtype), #type
-                dbus.UInt32(rrset.ttl), #ttl
-                #string_array_to_txt_array([record.to_digestable().decode('utf-8')])[0] #rdata
-                string_array_to_txt_array([record.to_digestable()])[0] #rdata
-            )
+            try:
+                logging.info('adding mDNS record to Avahi: %s' % rrset.to_text())
+                group.AddRecord( #http://avahi.sourcearchive.com/documentation/0.6.30-5/avahi-client_2publish_8h_a849f3042580d6c8534cba820644517ac.html#a849f3042580d6c8534cba820644517ac
+                  IF_UNSPEC,  # iface *
+                  PROTO_UNSPEC,  # proto _INET & _INET6
+                  dbus.UInt32(256),  # AvahiPublishFlags (use multicast)
+                  str(rrset.name).decode('utf-8'), #name
+                  dbus.UInt16(record.rdclass), #class
+                  dbus.UInt16(record.rdtype), #type
+                  dbus.UInt32(rrset.ttl), #ttl
+                  #string_array_to_txt_array([record.to_digestable().decode('utf-8')])[0] #rdata
+                  string_array_to_txt_array([record.to_digestable()])[0] #rdata
+                )
+            except org.freedesktop.Avahi.InvalidDomainNameError:
+                pass #mac probably sent a device_info PTR with spaces and parentheses in the computer name
+
 
 def _get_group():
     """Create a group, on the system bus"""

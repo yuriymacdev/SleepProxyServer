@@ -22,9 +22,9 @@ def handle(mac, addresses, iface):
             expr = "ip6[6]=6 && ip6[53]&4!=0 and ip6[6]=6 && ip6[53]&1=0 and dst host %s" % (address) #ipv6 can have multiple headers, so no tcp* shortcuts in pcap-filter
         else:
             expr = "tcp[tcpflags] & tcp-syn != 0 and tcp[tcpflags] & tcp-ack = 0 and dst host %s" % (address)
-        thread = SnifferThread( filterexp=expr, prn=partial(_handle_packet, mac, address), iface=iface)
+        thread = SnifferThread( filterexp=expr, prn=partial(_handle_packet, mac, address), iface=iface) #using a callback, but nut not doing it async
         _HOSTS[mac] = thread
-        thread.start()
+        thread.start() #make this a greenlet?
 
 def forget(mac):
     logging.info("Removing host %s from TCP handler" % (mac, ))
