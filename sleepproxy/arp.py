@@ -35,8 +35,8 @@ def _handle_packet(address, mac, sleeper, packet):
     if ARP not in packet:
         # I don't know how this happens, but I've seen it
         return
-    if packet.hwsrc.replace(':','') == sleeper:
-        logging.info("sleeper[%s] has awakened, removing it from ARP watcher" % sleeper)
+    if packet.hwsrc.replace(':','') == sleeper: #grat-arp from sleeper on wakeup
+        logging.warning("sleeper[%s] has awakened, deregistering it" % sleeper)
         sleepproxy.manager.forget_host(sleeper)
         return
     if packet[ARP].op != ARP.who_has:

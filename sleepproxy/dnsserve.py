@@ -1,4 +1,4 @@
-"""A NSUPDATE server class for gevent"""
+"""A NSUPDATE server class for gevent, emulating apple's mDNSResponder SPS server"""
 # Copyright (c) 2013 Russell Cloran
 # Copyright (c) 2014 Joey Korkames
 
@@ -17,8 +17,11 @@ import netifaces
 
 import binascii
 
+
+# https://github.com/aosm/mDNSResponder/commits/master
 # http://www.opensource.apple.com/source/mDNSResponder/mDNSResponder-522.1.11/mDNSCore/mDNS.c
-# [SLEEPER]BeginSleepProcessing(),NetWakeResolve(),SendSPSRegistration() -> [SPS SERVER]mDNSCoreReceiveUpdate() -> [SLEEPER]mDNSCoreReceive(),mDNSCoreReceiveUpdateR()
+# [SLEEPER]BeginSleepProcessing(),NetWakeResolve(),SendSPSRegistration() -> [SPS]mDNSCoreReceiveUpdate() -> [SLEEPER]mDNSCoreReceive(),mDNSCoreReceiveUpdateR()
+# [WAKER]*L3 -> [SPS]*BPF,SendResponses(),SendWakeup(),WakeOnResolve++,mDNSSendWakeOnResolve() -> [SLEEPER]
 
 # http://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-11
 dns.edns.UL = 2
@@ -50,14 +53,14 @@ http://tools.ietf.org/html/draft-sekar-dns-ul-01"""
 
 dns.edns._type_to_class.update({dns.edns.UL: UpdateLeaseOption})
 
-#SetupOwnerOpt mDNS.c
+#SetupOwnerOpt() mDNS.c
 class OwnerOption(dns.edns.Option):
     """EDNS option for DNS-SD Sleep Proxy Service client mac address hinting
 http://tools.ietf.org/html/draft-cheshire-edns0-owner-option-00"""
     def __init__(self, ver=0, seq=1, pmac=None, wmac=None, passwd=None):
         super(OwnerOption, self).__init__(dns.edns.OWNER)
-        self.seq = seq
         self.ver = ver
+        self.seq = seq
         self.pmac = self._mac2text(pmac)
         self.wmac = self._mac2text(wmac)
         self.passwd = passwd
@@ -167,6 +170,7 @@ class SleepProxyServer(DatagramServer):
     
         for rrset in message.authority:
             rrset.rdclass %= dns.rdataclass.UNIQUE #remove cache-flush bit
+            #rrset.rdata = rrset.rdata.decode(utf-8)
             info['records'].append(rrset)
             self._add_addresses(info, rrset)
     
@@ -182,8 +186,9 @@ class SleepProxyServer(DatagramServer):
     
         self._answer(raddress, message)
 
-        # TODO: Better composability
-        manage_host(info)
+        if len(message.options) == 2:
+           # need both an owner and an update-lease option, else its just a post-wake notification (incremented seq number)
+           manage_host(info)
         
     def _add_addresses(self, info, rrset):
         if rrset.rdtype != dns.rdatatype.PTR: return

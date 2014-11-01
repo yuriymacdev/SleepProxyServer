@@ -26,9 +26,9 @@ def manage_host(info):
 
 def forget_host(mac):
     logging.warning("De-registering %s from SPS" % mac)
-    mdns.forget(mac)
-    arp.forget(mac)
+    mdns.forget(mac) #drop adv first so mac's don't de-collide their own names
     tcp.forget(mac)
+    arp.forget(mac)
 
 def print_hosts(*args):
     logging.warning("MDNS: %s" % mdns._HOSTS)

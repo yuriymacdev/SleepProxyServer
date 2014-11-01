@@ -6,6 +6,7 @@ from scapy.all import IP, TCP
 import sleepproxy.manager
 from sleepproxy.sniff import SnifferThread
 from sleepproxy.wol import wake
+from time import sleep
 
 _HOSTS = {}
 
@@ -42,7 +43,8 @@ def _handle_packet(mac, address, packet):
         logging.debug("Sniffed a TCP SYN for the wrong address?: %s" % packet.show() )
         return
     #logging.debug(packet.display())
-    wake(mac)
+    sleepproxy.manager.mdns.forget(mac) # pre-emptively drop adv to keep the mac from de-colliding its name
+    sleep(0.4)
+    wake(mac) #retry=15?
+    #sleepproxy.manager.forget_host(mac) 
 
-    # TODO: Check if it awoke?
-    sleepproxy.manager.forget_host(mac)

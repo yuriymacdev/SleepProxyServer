@@ -70,8 +70,9 @@ sleepproxy.manager.manage_host(info)
 
 import signal
 def quit(*args):
+    sleepproxy.manager.forget_host(info['othermac'])
     sys.exit()
-#signal.signal(signal.SIGINFO, sleepproxy.manager.print_hosts) #BSD only, CTRL-T
+if hasattr(signal, 'SIGINFO'):  signal.signal(signal.SIGINFO, sleepproxy.manager.print_hosts) #BSD only, CTRL-T
 signal.signal(signal.SIGQUIT, sleepproxy.manager.print_hosts)
 signal.signal(signal.SIGUSR1, sleepproxy.manager.print_hosts)
 signal.signal(signal.SIGHUP, sleepproxy.manager.print_hosts) #would like to forget all hosts...

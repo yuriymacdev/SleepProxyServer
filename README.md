@@ -10,7 +10,7 @@ SPS has been tested against [SleepProxyClient](http://github.com/awein/SleepProx
 See Debugging instructions below to test other implementations.  
 Selective-port waking is not implemented, any TCP request to a sleep client will result in a wakeup attempt.  
 
-A port to C(++) or Go would be welcome for resource limited ARM devices.
+A port to C(++) or Go would be welcome for resource limited ARM devices.  
 
 Internals
 ------
@@ -22,13 +22,13 @@ The included server daemon, scripts/sleeproxyd, binds port 5353 and loops up som
 
 Installation
 -------
-Being based on ZeroConf, SPS requires almost no configuration.
-Just run it and clients will see its mDNS advertisement and register to it within their regular polling intervals and/or just before sleeping.
-`sudo pmset networkoversleep 1` may be necessary to ensure OSX clients will publish services at-all-costs.
+Being based on ZeroConf, SPS requires almost no configuration.  
+Just run it and clients will see its mDNS advertisement and register to it within their regular polling intervals and/or just before sleeping.  
+`sudo pmset networkoversleep 1` may be necessary to ensure OSX clients will publish services at-all-costs.  
 You must ensure both SPS server and client use the same network-segment and IP subnet and that IP Multicast traffic between them is not blocked.  
 
-gevent 1.0 is required for its co-operative threading feature; its packaged in Debian jessie.
-Because of this, SPS can't be run under python3 (FIXME: replace gevent with asyncio)
+gevent 1.0 is required for its co-operative threading feature; its packaged in Debian jessie.  
+Because of this, SPS can't be run under python3 (FIXME: replace gevent with asyncio)  
 
 * Debian 8.0+ (jessie) & Ubuntu 14.04+ (Trusty Tahr)
 ```
@@ -75,3 +75,4 @@ Further Reading
 * [ZeroConf rfc](http://datatracker.ietf.org/doc/rfc6763/)
 * http://datatracker.ietf.org/wg/dnssd/charter/
   * changes to mDNS/ZC for larger networks are under development: http://datatracker.ietf.org/doc/draft-cheshire-dnssd-hybrid/
+  * https://datatracker.ietf.org/doc/draft-sullivan-dnssd-mdns-dns-interop/
