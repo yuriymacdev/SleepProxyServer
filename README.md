@@ -38,6 +38,10 @@ nohup sleepproxyd >/dev/null 2>&1 &
 #^put that in rc.local or an initscript or systemd-unit
 ```
 
+* [OpenWRT](https://github.com/enigmagroup/enigmabox-openwrt/blob/master/python-gevent/Makefile)
+* [oWRT asyncIO](https://github.com/openwrt/packages/blob/master/lang/python3/files/python3-package-asyncio.mk) `opkg install python3-asyncio`
+* 
+
 Development & Debugging
 -----
 * run a canned client-less server and test a with a mock registration
