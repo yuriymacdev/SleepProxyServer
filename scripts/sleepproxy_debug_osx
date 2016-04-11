@@ -3,6 +3,13 @@
 #run as root
 [ $(id -u) != 0 ] && exec sudo $0
 
+dump_sps() {
+	# dump sleep proxies
+	for sps in $(printf list | scutil | grep SleepProxyServers | awk '{print $NF}'); do
+		printf "open\nget $sps\nd.show" | scutil
+	done
+}
+
 function ctrl_c() {
 	echo "** Trapped CTRL-C: returning DNS cache to normal logging"
 	killall mDNSResponder #restore default log levels to speed up syslog
@@ -12,12 +19,15 @@ function ctrl_c() {
 	echo "Should see $(hostname -s).local with TTL of 125 and with local interface names in the results, otherwise SPS server is retaining mirror record post-wake!"
 	dns-sd -G v4v6 $(hostname -s).local &
 	sleep 3 #dns-sd is clingy..
-	exit 
+	dump_sps
+	exit
 }
 
 function ctrl_t() {
 	echo "** Trapped CTRL-T: going to sleep to trigger a SPS registration! Will wake up 15 secs later..."
+	dump_sps
 	pmset relative wake 15; pmset sleepnow
+	dump_sps
 }
 
 if (launchctl blame system/com.apple.networking.discoveryd > /dev/null); then # OSX 10.10 Yosemite
@@ -42,14 +52,16 @@ else
 		#killall -USR2 mDNSResponder
 	) &
 	syslog -c mDNSResponder id #drop syslog debug filter bits
-	syslog -w 0 -k Sender mDNSResponder | egrep 'Registered|WOMP|BeginSleepProcessing|goodbyes|SPS|SleepProxyServer' </dev/null & #logtail
+	syslog -w 0 -k Sender mDNSResponder | egrep 'Registered|WOMP|BeginSleepProcessing|goodbyes|SPS|SleepProxyServer' </dev/null & #logtail in foreground
 fi
+
+dump_sps
 
 trap ctrl_c INT
 trap ctrl_t INFO #BSD only :-(
 trap ctrl_t TSTP
 trap -- '' SIGTERM
 echo "press CTRL-C to exit logtail and restore DNS cacher to normal logging. CTRL-T to sleep cycle this Mac"
-	
+
 while (true); do wait $!; done #watch syslog proc in background and listen for traps
 kill $! #failsafe
