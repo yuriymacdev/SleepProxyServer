@@ -16,7 +16,7 @@ setup(
         "gevent",
         "netifaces",
         "scapy",
-        "py2-ipadddress"
+        "py2-ipaddress"
     ],
     dependency_links=[
         "http://www.secdev.org/projects/scapy/files/",
