@@ -78,5 +78,5 @@ Further Reading
   * draft #8 is last version to describe Sleep Proxy services @ sec 17.: http://tools.ietf.org/id/draft-cheshire-dnsext-multicastdns-08.txt
 * [ZeroConf rfc](http://datatracker.ietf.org/doc/rfc6763/)
 * http://datatracker.ietf.org/wg/dnssd/charter/
-  * changes to mDNS/ZC for larger networks are under development: http://datatracker.ietf.org/doc/draft-cheshire-dnssd-hybrid/
-  * https://datatracker.ietf.org/doc/draft-sullivan-dnssd-mdns-dns-interop/
+  * changes to mDNS/ZC for larger networks are under development: https://datatracker.ietf.org/doc/draft-ietf-dnssd-hybrid/
+  * https://datatracker.ietf.org/doc/rfc8222/
