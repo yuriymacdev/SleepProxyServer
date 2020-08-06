@@ -33,7 +33,7 @@ Because of this, SPS can't be run under python3 (FIXME: replace gevent with asyn
 * Debian 8.0+ (jessie) & Ubuntu 14.04+ (Trusty Tahr)
 ```
 apt-get install python-scapy python-netifaces python-dbus python-gevent python-pip python-setuptools avahi-daemon git
-pip install git+https://github.com/kfix/SleepProxyServer.git
+pip install git+https://github.com/yuriymacdev/SleepProxyServer.git
 nohup sleepproxyd >/dev/null 2>&1 &
 #^put that in rc.local or an initscript or systemd-unit
 ```
