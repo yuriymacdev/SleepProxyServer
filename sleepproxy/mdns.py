@@ -100,7 +100,7 @@ def _update_to_group(group, rrsets):
                 logging.info('added mDNS record to Avahi: %s' % rrset.to_text())
             except UnicodeDecodeError:
                 logging.warn('malformed unicode in rdata, skipping: %s' % rrset.to_text())
-            except dbus.exceptions.DBusException, e:
+            except dbus.exceptions.DBusException as e:
                 if e.get_dbus_name() == 'org.freedesktop.Avahi.InvalidDomainNameError':
                     logging.warning('not mirroring mDNS record with special chars: %s' % rrset.to_text())
                     continue # skip this record since Avahi will reject it
