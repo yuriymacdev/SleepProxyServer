@@ -12,7 +12,7 @@ setup(
     scripts=["scripts/sleepproxyd"],
     install_requires=[
         # "dbus-python",  # Unfortunately not distributed with a setup.py
-        "dnspython",
+        "dnspython3",
         "gevent",
         "netifaces",
         "scapy",

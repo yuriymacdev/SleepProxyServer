@@ -45,7 +45,7 @@ http://tools.ietf.org/html/draft-sekar-dns-ul-01"""
         return cls(lease)
 
     def __repr__(self):
-        return "%s[OPT#%s](%s)" % (
+        return "{}[OPT#{}]({})" .format (
             self.__class__.__name__,
             self.otype,
             self.lease
@@ -97,7 +97,7 @@ http://tools.ietf.org/html/draft-cheshire-edns0-owner-option-00"""
         return cls(*opt)
 
     def __repr__(self):
-        return "%s[OPT#%s](%s, %s, %s, %s, %s)" % (
+        return "{}[OPT#{}]({}, {}, {}, {}, {})" .format (
             self.__class__.__name__,
             self.otype,
             self.ver,
@@ -137,19 +137,19 @@ class SleepProxyServer(DatagramServer):
             #  so turn off Wi-Fi for ethernet-connected clients
             pass #or send back an nxdomain or servfail
         except: #no way to just catch dns.exceptions.*
-            logging.warning("Error decoding DNS message from %s" % raddress[0])
+            logging.warning("Error decoding DNS message from {}" .format (raddress[0]))
             logging.debug(traceback.format_exc())
             return
     
         if message.edns < 0:
-            logging.warning("Received non-EDNS message from %s, ignoring" % raddress[0])
+            logging.warning("Received non-EDNS message from {}, ignoring" .format (raddress[0]))
             return
     
         if not (message.opcode() == 5 and message.authority):
-            logging.warning("Received non-UPDATE message from %s, ignoring" % raddress[0])
+            logging.warning("Received non-UPDATE message from {}, ignoring" .format (raddress[0]))
             return
     
-        logging.debug("Received SPS registration from %s, parsing" % raddress[0])
+        logging.debug("Received SPS registration from {}, parsing" .format (raddress[0]))
 
         info = {'records': [], 'addresses': []}
     
@@ -163,7 +163,7 @@ class SleepProxyServer(DatagramServer):
                     mask = address['netmask']
                     if af == netifaces.AF_INET6: mask = (mask.count('f') * 4) # convert linux masks to prefix length...gooney
                     if address['addr'].find('%') > -1: continue #more linux ipv6 stupidity
-                    iface_net = ipaddress.ip_interface('%s/%s' % (address['addr'], mask)).network
+                    iface_net = ipaddress.ip_interface('{}/{}' .format (address['addr'], mask)).network
                     if ipaddress.ip_address(raddress[0]) in iface_net:
                         info['mymac'] = ifaddresses[netifaces.AF_LINK][0]['addr']
                         info['myif'] = iface
@@ -174,7 +174,7 @@ class SleepProxyServer(DatagramServer):
             info['records'].append(rrset)
             self._add_addresses(info, rrset)
     
-        logging.debug('NSUPDATE START--\n\n%s\n\n%s\n\n--NSUPDATE END' % (message,message.options))
+        logging.debug('NSUPDATE START--\n\n{}\n\n{}\n\n--NSUPDATE END'.format (message,message.options))
  
         for option in message.options:
             if option.otype == dns.edns.UL:
@@ -204,6 +204,6 @@ class SleepProxyServer(DatagramServer):
         response.flags = dns.flags.QR | dns.opcode.to_flags(dns.opcode.UPDATE)
         #needs a single OPT record to confirm registration:  0 TTL    4500   48 . OPT Max 1440 Lease 7200 Vers 0 Seq  21 MAC D4:9A:20:DE:9D:38
         response.use_edns(edns=True, ednsflags=dns.rcode.NOERROR, payload=query.payload, options=[query.options[0]]) #payload should be 1440, theoretical udp-over-eth maxsz stdframe
-        logging.warning("Confirming SPS registration @%s with %s[%s] for %s secs" % (query.options[1].seq, address[0], query.options[1].pmac, query.options[0].lease))
-        logging.debug('RESPONSE--\n\n%s\n\n%s\n\n--RESPONSE END' % (response,response.options))
+        logging.warning("Confirming SPS registration @{} with {}[{}] for {} secs" .format (query.options[1].seq, address[0], query.options[1].pmac, query.options[0].lease))
+        logging.debug('RESPONSE--\n\n{}\n\n{}\n\n--RESPONSE END' .format (response,response.options))
         self.socket.sendto(response.to_wire(), address)

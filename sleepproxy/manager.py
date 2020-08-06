@@ -25,15 +25,15 @@ def manage_host(info):
     mdns.handle(info['othermac'], info['records']) #advertise last
 
 def forget_host(mac):
-    logging.warning("De-registering %s from SPS" % mac)
+    logging.warning("De-registering {} from SPS" .format(mac))
     mdns.forget(mac) #drop adv first so mac's don't de-collide their own names
     tcp.forget(mac)
     arp.forget(mac)
 
 def print_hosts(*args):
-    logging.warning("MDNS: %s" % mdns._HOSTS)
-    logging.warning("ARP: %s" % arp._HOSTS)
-    logging.warning("TCP: %s" % tcp._HOSTS)
+    logging.warning("MDNS: {}" .format( mdns._HOSTS))
+    logging.warning("ARP: {}" .format( arp._HOSTS))
+    logging.warning("TCP: {}" .format (tcp._HOSTS))
 
 def advertise(*args):
     mdns.register_service({

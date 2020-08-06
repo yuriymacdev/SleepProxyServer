@@ -51,36 +51,35 @@ def register_service(record):
 
 def handle(mac, records):
     if mac in _HOSTS:
-        logging.debug("I already seem to be handling mDNS for %s" % (mac, ))
+        logging.debug("I already seem to be handling mDNS for {}" .format (mac, ))
         return
-    logging.info('Now mirroring mDNS advertisements from %s to local Avahi server' % (mac))
+    logging.info('Now mirroring mDNS advertisements from {} to local Avahi server' .format(mac))
     group = _get_group()
     _HOSTS[mac] = group
     _update_to_group(group, records)
     result = group.Commit(utf8_strings=True)
-    logging.debug("Result of Commit() on mDNS records was %s" % (result, ))
+    logging.debug("Result of Commit() on mDNS records was {}" .format (result, ))
 
 def forget(mac):
-    logging.info("Removing %s from mDNS handler & Avahi" % (mac, ))
+    logging.info("Removing {} from mDNS handler & Avahi" .format (mac, ))
     if mac not in _HOSTS:
-        logging.debug("I don't seem to be managing mDNS for %s" % (mac, ))
+        logging.debug("I don't seem to be managing mDNS for {}" .format (mac, ))
         return
     group = _HOSTS.pop(mac)
     group.Free()
 
 def _update_to_group(group, rrsets):
     """Convert a DNS UPDATE to additions to an Avahi mDNS group"""
-    #logging.debug('parsing DNS UPDATE:\n\n\%s' % rrsets)
     for rrset in rrsets:
        for record in rrset:
             record.rdclass %= dns.rdataclass.UNIQUE #remove cache-flush bit
 
             if record.rdtype not in [dns.rdatatype.PTR, dns.rdatatype.A, dns.rdatatype.AAAA, dns.rdatatype.TXT, dns.rdatatype.SRV]:
-                logging.warning('Invalid DNS RR type (%s), not adding mDNS record to Avahi' % record.rdtype)
+                logging.warning('Invalid DNS RR type ({}), not adding mDNS record to Avahi' .format (record.rdtype))
                 continue
 
             if record.rdclass != dns.rdataclass.IN:
-                logging.warning('Invalid DNS RR class (%s), not adding mDNS record to Avahi' % record.rdclass)
+                logging.warning('Invalid DNS RR class ({}), not adding mDNS record to Avahi' .format (record.rdclass))
                 continue
 
             #if (record.rdtype == dns.rdatatype.PTR and ':' in record.to_digestable()) or record.rdtype == dns.rdatatype.AAAA:
@@ -97,12 +96,12 @@ def _update_to_group(group, rrsets):
                   dbus.UInt32(rrset.ttl), #ttl
                   string_array_to_txt_array([record.to_digestable()])[0] #rdata
                 )
-                logging.info('added mDNS record to Avahi: %s' % rrset.to_text())
+                logging.info('added mDNS record to Avahi: {}' .format( rrset.to_text()))
             except UnicodeDecodeError:
-                logging.warn('malformed unicode in rdata, skipping: %s' % rrset.to_text())
+                logging.warn('malformed unicode in rdata, skipping: {}' .format( rrset.to_text()))
             except dbus.exceptions.DBusException as e:
                 if e.get_dbus_name() == 'org.freedesktop.Avahi.InvalidDomainNameError':
-                    logging.warning('not mirroring mDNS record with special chars: %s' % rrset.to_text())
+                    logging.warning('not mirroring mDNS record with special chars: {}' .format (rrset.to_text()))
                     continue # skip this record since Avahi will reject it
                     # mac probably sent a device_info PTR with spaces and parentheses in the friendly description
                     #  per https://tools.ietf.org/html/rfc6763#section-4.1.3

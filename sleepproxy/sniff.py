@@ -32,7 +32,7 @@ class SnifferThread(Thread):
                         break
                     self._prn(p)
                     if self._stop_recd.is_set():
-                        print "Breaking out of sniffer thread %s" % (self, )
+                        print ("Breaking out of sniffer thread {}".format(self))
                         break
             except KeyboardInterrupt:
                 break
